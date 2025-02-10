@@ -1,0 +1,27 @@
+title URL Processing and Analysis
+
+User [icon: user] > Frontend [icon: monitor, color: lightblue]: Enter URL
+activate User
+Frontend > Backend [icon: server, color: green]: Send URL
+activate Frontend
+
+Backend > Diffbot [icon: cloud, color: orange]: Request Technographics
+Backend > Diffbot: Request Firmographics
+Diffbot --> Backend: Enriched Data
+
+Backend > Google CrUX [icon: gcp-cloud]: Request User Experience Data
+Google CrUX --> Backend: Formatted Response
+
+Backend > Alexa Rank [icon: aws-ec2]: Request Traffic Data
+Alexa Rank --> Backend: Traffic Assessment
+
+par [label: Load Data for Analysis] {
+  Backend > AI Analysis [icon: brain, color: purple]: Send Data
+  AI Analysis --> Backend: Textual Analysis Result
+}
+deactivate Frontend
+
+Backend --> Frontend: Display Results
+deactivate Backend
+Frontend --> User: Show Analysis
+deactivate User
