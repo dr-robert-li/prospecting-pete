@@ -3,6 +3,7 @@ import { parse } from 'csv-parse/sync';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import logger from '../utils/logger.js';
+import similarWebService from './similarWebService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TOP_1M_PATH = path.join(__dirname, '../../includes/top1m.csv');
@@ -22,9 +23,11 @@ export class TrafficEstimator {
       { max: 100000, range: ["500K", "1M"] },
       { max: 250000, range: ["200K", "500K"] },
       { max: 500000, range: ["100K", "200K"] },
-      { max: 1000000, range: ["50K", "100K"] }
+      { max: 1000000, range: ["50K", "100K"] },
+      { max: 2500000, range: ["20K", "50K"] },
+      { max: 5000000, range: ["10K", "20K"] },
+      { max: 10000000, range: ["1K", "10K"] }
     ];
-    
   }
 
   loadRankings() {
@@ -49,9 +52,7 @@ export class TrafficEstimator {
   getDomainFromUrl(url) {
     let domain = url;
     if (typeof url === 'string') {
-      // Remove protocol and www if present
       domain = url.replace(/^(https?:\/\/)?(www\.)?/, '');
-      // Remove any path or query parameters
       domain = domain.split('/')[0];
     }
     return domain;
@@ -75,29 +76,26 @@ export class TrafficEstimator {
   }
 
   estimateMonthlyVisits(rank) {
-    if (!rank) return 0;
-    
-    // Logarithmic model for traffic estimation
-    const baseTraffic = 1000000000; // 1B visits for rank 1
-    const logBase = 1.0005;
-    
-    return Math.floor(baseTraffic * Math.pow(logBase, -rank));
-  }
-
-  analyze(url) {
-    const domain = this.getDomainFromUrl(url);
-    const rank = this.getRank(domain);
-    const trafficRange = this.getTrafficRange(rank);
-    const monthlyVisits = this.estimateMonthlyVisits(rank);
-
-    return {
-      rank,
-      traffic: {
-        range: trafficRange,
-        estimatedMonthlyVisits: monthlyVisits
-      },
-      confidence: rank ? this.calculateConfidence(rank) : 0
-    };
+    if (!rank || rank <= 0) return 0;
+  
+    // Base parameters from Semrush's top site (Google: 139.29B visits)
+    const intercept = Math.log(139290000000); // ln(139.29B)
+    const slope = -1.05; // Adjusted for balanced decay
+  
+    // Damping factors for different rank tiers
+    let dampingFactor;
+    if (rank > 1000000) {
+      dampingFactor = 0.2;  // Extreme decay for >1M ranks
+    } else if (rank > 100000) {
+      dampingFactor = 0.45; // High decay for 100K–1M
+    } else if (rank > 5000) {
+      dampingFactor = 0.8;  // Moderate decay for mid-tier
+    } else {
+      dampingFactor = 1;    // No decay for top ranks
+    }
+  
+    const estimatedVisits = dampingFactor * Math.exp(intercept + slope * Math.log(rank));
+    return Math.max(Math.floor(estimatedVisits), 1);
   }
 
   calculateConfidence(rank) {
@@ -107,6 +105,44 @@ export class TrafficEstimator {
     if (rank <= 500000) return 0.6;
     return 0.5;
   }
+
+  async analyze(url) {
+    const domain = this.getDomainFromUrl(url);
+    let rank = null;
+    let dataSource = null;
+    
+    // Try SimilarWeb first
+    //logger.info('Fetching rank from SimilarWeb', { domain });
+    const similarWebData = await similarWebService.getRank(url);
+    rank = similarWebData.rank;
+    
+    if (rank) {
+      dataSource = 'similarweb';
+      //logger.debug('Using SimilarWeb rank data', { domain, rank });
+    } else {
+      // Fallback to top1m.csv
+      //logger.info('SimilarWeb rank not found, checking top1m.csv', { domain });
+      rank = this.getRank(domain);
+      dataSource = rank ? 'top1m' : null;
+      //logger.debug('Top1m.csv lookup result', { domain, rank, dataSource });
+    }
+  
+    const trafficRange = this.getTrafficRange(rank);
+    const monthlyVisits = this.estimateMonthlyVisits(rank);
+  
+    return {
+      domain,
+      rank,
+      source: dataSource,
+      traffic: {
+        range: trafficRange,
+        estimatedMonthlyVisits: monthlyVisits
+      },
+      confidence: rank ? this.calculateConfidence(rank) : 0,
+      lastUpdated: new Date().toISOString()
+    };
+  }
+  
 }
 
 export default new TrafficEstimator();
