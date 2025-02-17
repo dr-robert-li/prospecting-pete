@@ -12,18 +12,19 @@ export class TrafficEstimator {
     this.domainRanks = new Map();
     this.loadRankings();
     
-    // Traffic estimation ranges based on rank positions
     this.trafficRanges = [
-      { max: 100, range: ["10M", "100M"] },
-      { max: 1000, range: ["5M", "10M"] },
-      { max: 5000, range: ["1M", "5M"] },
-      { max: 10000, range: ["500K", "1M"] },
-      { max: 50000, range: ["100K", "500K"] },
-      { max: 100000, range: ["50K", "100K"] },
-      { max: 250000, range: ["10K", "50K"] },
-      { max: 500000, range: ["5K", "10K"] },
-      { max: 1000000, range: ["1K", "5K"] }
+      { max: 100, range: ["50M", "∞"] },
+      { max: 1000, range: ["20M", "50M"] },
+      { max: 5000, range: ["10M", "20M"] },
+      { max: 10000, range: ["5M", "10M"] },
+      { max: 20000, range: ["2M", "5M"] },
+      { max: 50000, range: ["1M", "2M"] },
+      { max: 100000, range: ["500K", "1M"] },
+      { max: 250000, range: ["200K", "500K"] },
+      { max: 500000, range: ["100K", "200K"] },
+      { max: 1000000, range: ["50K", "100K"] }
     ];
+    
   }
 
   loadRankings() {
@@ -45,20 +46,20 @@ export class TrafficEstimator {
     }
   }
 
-  getRank(domain) {
-    // Handle www. and subdomain variations
-    const variations = [
-      domain,
-      domain.replace('www.', ''),
-      `www.${domain.replace('www.', '')}`
-    ];
-
-    for (const variation of variations) {
-      const rank = this.domainRanks.get(variation);
-      if (rank) return rank;
+  getDomainFromUrl(url) {
+    let domain = url;
+    if (typeof url === 'string') {
+      // Remove protocol and www if present
+      domain = url.replace(/^(https?:\/\/)?(www\.)?/, '');
+      // Remove any path or query parameters
+      domain = domain.split('/')[0];
     }
+    return domain;
+  }
 
-    return null;
+  getRank(url) {
+    const domain = this.getDomainFromUrl(url);
+    return this.domainRanks.get(domain);
   }
 
   getTrafficRange(rank) {
@@ -76,15 +77,15 @@ export class TrafficEstimator {
   estimateMonthlyVisits(rank) {
     if (!rank) return 0;
     
-    // Using a logarithmic model for traffic estimation
-    // Based on empirical data correlations
+    // Logarithmic model for traffic estimation
     const baseTraffic = 1000000000; // 1B visits for rank 1
     const logBase = 1.0005;
     
     return Math.floor(baseTraffic * Math.pow(logBase, -rank));
   }
 
-  analyze(domain) {
+  analyze(url) {
+    const domain = this.getDomainFromUrl(url);
     const rank = this.getRank(domain);
     const trafficRange = this.getTrafficRange(rank);
     const monthlyVisits = this.estimateMonthlyVisits(rank);
@@ -100,7 +101,6 @@ export class TrafficEstimator {
   }
 
   calculateConfidence(rank) {
-    // Higher confidence for higher-ranked sites
     if (rank <= 1000) return 0.9;
     if (rank <= 10000) return 0.8;
     if (rank <= 100000) return 0.7;

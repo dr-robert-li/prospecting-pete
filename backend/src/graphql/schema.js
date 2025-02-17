@@ -39,7 +39,7 @@ const typeDefs = gql`
   }
 
   type PageSpeedData {
-    score: Int!
+    score: Float!
     metrics: PageSpeedMetrics!
   }
 
@@ -81,7 +81,7 @@ const typeDefs = gql`
   }
 
   type WPPlugins {
-    total: Int!
+    total: Float!
     detected: [String!]!
     common: [String!]!
   }
@@ -108,7 +108,7 @@ const typeDefs = gql`
   type EndpointStatus {
     path: String!
     accessible: Boolean!
-    status: Int!
+    status: Float!
   }
 
   type InfrastructureData {
@@ -155,16 +155,16 @@ const typeDefs = gql`
   }
 
   type TrafficData {
-    rank: Int
+    rank: Float
     traffic: TrafficMetrics
     confidence: Float!
-    similarWebRank: Int
+    similarWebRank: Float
     lastUpdated: String
   }
 
   type TrafficMetrics {
     range: TrafficRange!
-    estimatedMonthlyVisits: Int!
+    estimatedMonthlyVisits: Float!
   }
 
   type TrafficRange {
@@ -228,8 +228,8 @@ const typeDefs = gql`
   }
 
   type PeopleInfo {
-    employeesMin: Int
-    employeesMax: Int
+    employeesMin: Float
+    employeesMax: Float
     founders: [String]
     ceo: String
   }
@@ -242,13 +242,13 @@ const typeDefs = gql`
   }
 
   type CompanyMetrics {
-    monthlyTraffic: Int
+    monthlyTraffic: Float
     importance: Float
     wikipediaPageviews: WikipediaMetrics
   }
 
   type WikipediaMetrics {
-    lastYear: Int
+    lastYear: Float
     growth: Float
   }
 

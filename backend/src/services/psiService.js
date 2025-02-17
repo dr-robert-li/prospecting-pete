@@ -6,33 +6,66 @@ export class PageSpeedService {
   constructor() {
     this.apiEndpoint = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
     this.apiKey = config.PSI_API_KEY;
+    this.maxRetries = 3;
+    this.retryDelay = 1000;
   }
 
   async analyze(url) {
-    try {
-      const response = await axios.get(this.apiEndpoint, {
-        params: {
-          url,
-          key: this.apiKey,
-          strategy: 'desktop'
-        }
-      });
+    let attempt = 0;
+    
+    while (attempt < this.maxRetries) {
+      try {
+        const response = await axios.get(this.apiEndpoint, {
+          params: {
+            url,
+            key: this.apiKey,
+            strategy: 'desktop',
+            category: ['performance']
+          },
+          timeout: 30000
+        });
 
-      const { lighthouseResult } = response.data;
-      
-      return {
-        score: Math.round(lighthouseResult.categories.performance.score * 100),
-        metrics: {
-          firstContentfulPaint: lighthouseResult.audits['first-contentful-paint'].numericValue,
-          speedIndex: lighthouseResult.audits['speed-index'].numericValue,
-          largestContentfulPaint: lighthouseResult.audits['largest-contentful-paint'].numericValue,
-          timeToInteractive: lighthouseResult.audits['interactive'].numericValue
+        return this.processResults(response.data);
+      } catch (error) {
+        attempt++;
+        
+        if (attempt === this.maxRetries) {
+          logger.error('PSI API error:', { 
+            url, 
+            error: error.message,
+            statusCode: error.response?.status,
+            attempt 
+          });
+          
+          // Return default structure with null values
+          return {
+            score: null,
+            metrics: {
+              firstContentfulPaint: null,
+              speedIndex: null,
+              largestContentfulPaint: null,
+              timeToInteractive: null
+            }
+          };
         }
-      };
-    } catch (error) {
-      logger.error('PSI API error:', { url, error: error.message });
-      throw new Error(`Failed to fetch PageSpeed data: ${error.message}`);
+        
+        await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+      }
     }
+  }
+
+  processResults(data) {
+    const { lighthouseResult } = data;
+    
+    return {
+      score: Math.round(lighthouseResult.categories.performance.score * 100),
+      metrics: {
+        firstContentfulPaint: lighthouseResult.audits['first-contentful-paint'].numericValue,
+        speedIndex: lighthouseResult.audits['speed-index'].numericValue,
+        largestContentfulPaint: lighthouseResult.audits['largest-contentful-paint'].numericValue,
+        timeToInteractive: lighthouseResult.audits['interactive'].numericValue
+      }
+    };
   }
 }
 

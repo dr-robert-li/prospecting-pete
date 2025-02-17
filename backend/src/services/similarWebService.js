@@ -10,27 +10,38 @@ export class SimilarWebService {
 
   async getRank(url) {
     try {
-      // Extract domain from URL and remove www. if present
-      const domain = new URL(url).hostname.replace('www.', '');
-      
-      // Construct API URL according to documentation
+      const domain = this.getDomainFromUrl(url);
       const apiUrl = `${this.apiEndpoint}/${domain}/rank`;
       
-      // Make request with API key as query parameter
       const response = await axios.get(apiUrl, {
         params: {
           api_key: this.apiKey
         }
       });
 
+      // Extract rank from correct response structure
+      const rank = response.data?.similar_rank?.rank;
+      const lastUpdated = response.data?.meta?.last_updated;
+
       return {
-        rank: response.data.similar_rank,
-        lastUpdated: response.data.last_updated
+        rank: typeof rank === 'number' ? rank : null,
+        lastUpdated: lastUpdated || null
       };
     } catch (error) {
       logger.error('SimilarWeb API error:', { url, error: error.message });
-      throw new Error(`Failed to fetch rank data: ${error.message}`);
+      return { rank: null, lastUpdated: null };
     }
+  }
+
+  getDomainFromUrl(url) {
+    let domain = url;
+    if (typeof url === 'string') {
+      // Remove protocol and www if present
+      domain = url.replace(/^(https?:\/\/)?(www\.)?/, '');
+      // Remove any path or query parameters
+      domain = domain.split('/')[0];
+    }
+    return domain;
   }
 }
 
