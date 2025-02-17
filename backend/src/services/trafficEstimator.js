@@ -37,17 +37,25 @@ export class TrafficEstimator {
         columns: true,
         skip_empty_lines: true
       });
-
+  
+      // Process records to keep lowest rank for duplicates
       records.forEach(record => {
-        this.domainRanks.set(record.domain, parseInt(record.rank));
+        const domain = record.domain;
+        const newRank = parseInt(record.rank);
+        const existingRank = this.domainRanks.get(domain);
+        
+        // Only update if no existing rank or new rank is lower
+        if (!existingRank || newRank < existingRank) {
+          this.domainRanks.set(domain, newRank);
+        }
       });
-
+  
       logger.info(`Loaded ${this.domainRanks.size} domain rankings`);
     } catch (error) {
       logger.error('Failed to load domain rankings:', error);
       throw new Error('Domain rankings initialization failed');
     }
-  }
+  }  
 
   getDomainFromUrl(url) {
     let domain = url;
@@ -77,25 +85,26 @@ export class TrafficEstimator {
 
   estimateMonthlyVisits(rank) {
     if (!rank || rank <= 0) return 0;
-  
-    // Base parameters from Semrush's top site (Google: 139.29B visits)
-    const intercept = Math.log(139290000000); // ln(139.29B)
-    const slope = -1.05; // Adjusted for balanced decay
-  
-    // Damping factors for different rank tiers
+
+    // Parameters
+    const baseTraffic = 139290000000; // Google's monthly visits
+    const decayExponent = -1.05;
+
+    // Damping factor based on rank tiers
     let dampingFactor;
-    if (rank > 1000000) {
-      dampingFactor = 0.2;  // Extreme decay for >1M ranks
-    } else if (rank > 100000) {
-      dampingFactor = 0.45; // High decay for 100K–1M
-    } else if (rank > 5000) {
-      dampingFactor = 0.8;  // Moderate decay for mid-tier
+    if (rank <= 10000) {
+        dampingFactor = 1.0;
+    } else if (rank <= 100000) {
+        dampingFactor = 0.8;
+    } else if (rank <= 1000000) {
+        dampingFactor = 0.5;
     } else {
-      dampingFactor = 1;    // No decay for top ranks
+        dampingFactor = 0.3;
     }
-  
-    const estimatedVisits = dampingFactor * Math.exp(intercept + slope * Math.log(rank));
-    return Math.max(Math.floor(estimatedVisits), 1);
+
+    // Calculate estimated visits
+    const estimatedVisits = dampingFactor * baseTraffic * Math.pow(rank, decayExponent);
+    return Math.max(Math.floor(estimatedVisits), 1); // Ensure at least 1 visit
   }
 
   calculateConfidence(rank) {
@@ -118,13 +127,13 @@ export class TrafficEstimator {
     
     if (rank) {
       dataSource = 'similarweb';
-      //logger.debug('Using SimilarWeb rank data', { domain, rank });
+      //logger.info('Using SimilarWeb rank data', { domain, rank });
     } else {
       // Fallback to top1m.csv
       //logger.info('SimilarWeb rank not found, checking top1m.csv', { domain });
       rank = this.getRank(domain);
       dataSource = rank ? 'top1m' : null;
-      //logger.debug('Top1m.csv lookup result', { domain, rank, dataSource });
+      //logger.info('Top1m.csv lookup result', { domain, rank, dataSource });
     }
   
     const trafficRange = this.getTrafficRange(rank);
