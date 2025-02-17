@@ -1,4 +1,6 @@
 # Prospecting Pete Backend
+### Version 0.1.0
+### Robert Li
 
 Advanced website analysis backend service providing comprehensive technical, traffic, and company insights through both GraphQL and REST APIs.
 
@@ -257,6 +259,12 @@ All endpoints return structured error responses:
 npm run lint     # Run ESLint
 npm test        # Run tests
 ```
+
+## Roadmap
+
+#### Future Enhancements
+
+v0.2.0 (Q4 2025) - AI-Powered Insights for Enhanced Business Intelligence
 
 ## License
 
