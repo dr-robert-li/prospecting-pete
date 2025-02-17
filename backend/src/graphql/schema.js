@@ -3,6 +3,7 @@ import { gql } from 'apollo-server-express';
 const typeDefs = gql`
   type SiteAnalysis {
     url: String!
+    normalizedUrl: String
     cruxData: CruxMetrics
     pageSpeed: PageSpeedData
     technical: TechnicalData
@@ -11,10 +12,30 @@ const typeDefs = gql`
   }
 
   type CruxMetrics {
-    fcp: Float
-    lcp: Float
-    cls: Float
-    fid: Float
+    largest_contentful_paint: MetricData
+    first_contentful_paint: MetricData
+    interaction_to_next_paint: MetricData
+    experimental_time_to_first_byte: MetricData
+    cumulative_layout_shift: MetricData
+  }
+
+  type MetricData {
+    p75: Float!
+    rating: String!
+    distribution: Distribution!
+    histogram: [HistogramBucket!]!
+  }
+
+  type Distribution {
+    good: Float!
+    needsImprovement: Float!
+    poor: Float!
+  }
+
+  type HistogramBucket {
+    start: Float
+    end: Float
+    density: Float!
   }
 
   type PageSpeedData {
