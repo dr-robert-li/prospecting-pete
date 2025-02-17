@@ -66,3 +66,15 @@ coverage/
 .next/
 .nuxt/
 .svelte-kit/
+
+# Data files
+*.csv
+*.json
+*.db
+*.sqlite
+*.xml
+*.yaml
+*.yml
+
+# Rank Source File
+!backend/includes/top1m.csv

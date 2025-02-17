@@ -1,5 +1,11 @@
 import winston from 'winston';
 import { config } from '../config/env.js';
+import path from 'path';
+import fs from 'fs';
+
+// Create logs directory structure if it doesn't exist
+const logsDir = path.join(process.cwd(), 'logs', 'expressjs');
+fs.mkdirSync(logsDir, { recursive: true });
 
 const logger = winston.createLogger({
   level: config.NODE_ENV === 'development' ? 'debug' : 'info',
@@ -15,11 +21,11 @@ const logger = winston.createLogger({
       )
     }),
     new winston.transports.File({ 
-      filename: 'error.log', 
+      filename: path.join(logsDir, 'error.log'), 
       level: 'error' 
     }),
     new winston.transports.File({ 
-      filename: 'combined.log' 
+      filename: path.join(logsDir, 'combined.log') 
     })
   ]
 });

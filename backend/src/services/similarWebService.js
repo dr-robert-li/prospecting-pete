@@ -10,10 +10,16 @@ export class SimilarWebService {
 
   async getRank(url) {
     try {
-      const domain = new URL(url).hostname;
-      const response = await axios.get(`${this.apiEndpoint}/${domain}`, {
-        headers: {
-          'api-key': this.apiKey
+      // Extract domain from URL and remove www. if present
+      const domain = new URL(url).hostname.replace('www.', '');
+      
+      // Construct API URL according to documentation
+      const apiUrl = `${this.apiEndpoint}/${domain}/rank`;
+      
+      // Make request with API key as query parameter
+      const response = await axios.get(apiUrl, {
+        params: {
+          api_key: this.apiKey
         }
       });
 
