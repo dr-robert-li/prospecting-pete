@@ -100,18 +100,25 @@ router.post('/technical', async (req, res, next) => {
 
 router.post('/traffic', async (req, res, next) => {
   try {
-    const { rank } = req.body;
-    if (!rank) {
-      logger.warn('Traffic estimate request missing rank');
-      return res.status(400).json({ error: 'Rank is required' });
+    const { url } = req.body;
+    if (!url) {
+      logger.warn('Traffic analysis request missing URL');
+      return res.status(400).json({ error: 'URL is required' });
     }
-    logger.info('Starting traffic estimation', { rank });
-    const trafficRange = trafficEstimator.getTrafficRange(rank);
-    const alexaEstimate = trafficEstimator.estimateFromAlexaRank(rank);
-    logger.info('Completed traffic estimation', { rank });
-    res.json({ trafficRange, alexaEstimate });
+    logger.info('Starting traffic analysis', { url });
+    const [trafficData, similarWebData] = await Promise.all([
+      trafficEstimator.analyze(url),
+      similarWebService.getRank(url)
+    ]);
+    const combinedData = {
+      ...trafficData,
+      similarWebRank: similarWebData.rank,
+      lastUpdated: similarWebData.lastUpdated
+    };
+    logger.info('Completed traffic analysis', { url });
+    res.json(combinedData);
   } catch (error) {
-    logger.error('Traffic estimation failed', { error: error.message });
+    logger.error('Traffic analysis failed', { error: error.message });
     next(error);
   }
 });
@@ -129,23 +136,6 @@ router.post('/company', async (req, res, next) => {
     res.json(firmographics);
   } catch (error) {
     logger.error('Firmographics analysis failed', { error: error.message });
-    next(error);
-  }
-});
-
-router.post('/similarweb', async (req, res, next) => {
-  try {
-    const { url } = req.body;
-    if (!url) {
-      logger.warn('SimilarWeb analysis request missing URL');
-      return res.status(400).json({ error: 'URL is required' });
-    }
-    logger.info('Starting SimilarWeb analysis', { url });
-    const rankData = await similarWebService.getRank(url);
-    logger.info('Completed SimilarWeb analysis', { url });
-    res.json(rankData);
-  } catch (error) {
-    logger.error('SimilarWeb analysis failed', { error: error.message });
     next(error);
   }
 });
